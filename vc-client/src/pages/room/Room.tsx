@@ -3,13 +3,13 @@ import { useContext, useEffect } from 'react'
 import { RoomContext } from '../../context/RoomContext'
 
 const Room = () => {
-    const { ws } = useContext(RoomContext)
+    const { ws, me } = useContext(RoomContext)
     //useParams takes parameters from the url
     const { id } = useParams()
 
     useEffect(() => {
-        ws.emit('join-room', id)
-    }, [id])
+        ws.emit('join-room', {roomId: id, peerId: me._id})
+    }, [id, me, ws])
 
   return (
     <>
