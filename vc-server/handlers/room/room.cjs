@@ -25,7 +25,7 @@ const roomHandler = (socket = Socket) => {
                 participants: rooms[roomId]
             }) 
         }
-
+ 
         socket.emit('user-joined', {peerId})
         
         socket.on('disconnect', () => {

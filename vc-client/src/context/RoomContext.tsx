@@ -1,8 +1,10 @@
-import { useState, useEffect, createContext } from "react";
+import { useState, useEffect, createContext, useReducer } from "react";
 import socketIOClient from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
 import Peer from "peerjs";
 import { v4 as uuidv4} from "uuid"
+import { peersReducer, PeerState } from "./peerReducer";
+import { addPeerAction,removePeerAction } from "./peerActions";
 const WS = "http://localhost:5000";
 //@ts-nocheck
 
@@ -16,13 +18,18 @@ export const RoomProvider:React.FC<{ children: React.ReactNode }> = ({children})
     const navigate = useNavigate()
     const [me, setMe] = useState<string | any>('')
     const [stream, setStream] = useState<MediaStream>()
+    const [peers, dispatch] = useReducer(peersReducer, {})
 
     function enterRoom(roomId:any){
         return navigate(`/room/${roomId}`)
     }
     
     function getUsers(x:{}){
-        console.log("checking users", x)
+        console.log("checking users: ", x)
+    }
+
+    function removePeer(peerId:string){
+        dispatch(removePeerAction(peerId))
     }
 
     useEffect(() => {
@@ -48,19 +55,29 @@ export const RoomProvider:React.FC<{ children: React.ReactNode }> = ({children})
         if(!me || !stream){
             return
         }else{
+            //when calling someone
             ws.on('user-joined', ({peerId}) => {
                 const call = me.call(peerId, stream)
+                call.on('stream', (peerStream:any) => {
+                    //peerId is your own id
+                    dispatch(addPeerAction(peerId, peerStream))
+                })
             })
 
-            me.on('call', (call) => {
+            //when answering a call
+            me.on('call', (call:any) => {
                 call.answer(stream)
+                call.on('stream', (peerStream:any) => {
+                    //call.peer is the person calling you
+                    dispatch(addPeerAction(call.peer, peerStream))
+                })
             })
         }
 
     }, [me, stream])
     
     return (
-    <RoomContext.Provider value={{ws, me, stream}}>
+    <RoomContext.Provider value={{ws, me, stream, peers}}>
         {children}
     </RoomContext.Provider>
     )
